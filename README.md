@@ -9,6 +9,9 @@ This tool helps candidates prepare for the initial recruiter conversation by ali
 - Company Type (Startup / Enterprise)
 - Uploaded Resume (PDF)
 
+## Docs
+- [RFC PDF](docs/RFC-001_Tech_Recruiter_Prep_AI_One_Page_Full.pdf)
+
 ---
 
 ## 🚀 Features
@@ -29,18 +32,20 @@ This tool helps candidates prepare for the initial recruiter conversation by ali
 
 ```mermaid
 flowchart TD
-    U[User] -->|Upload Resume (PDF)| S[Streamlit UI]
-    U -->|Paste JD Title + Description| S
-    U -->|Select Level + Company Type| S
-    U -->|Choose Model + Creativity| S
+  U[User] --> S[Streamlit UI]
+  U -->|Upload resume PDF| S
+  U -->|Enter JD title + description| S
+  U -->|Select level + company type| S
+  U -->|Choose model + temperature| S
 
-    S --> P[Input Processing\nPDF Text Extraction]
-    P --> G[Prompt Builder\n(5 System Prompt Variants)]
-    G --> O[OpenAI API\nModel + Temperature]
-    O --> R[Response Parser\n10 Structured Q&A]
-    R --> S
+  S --> P[Resume text extraction]
+  P --> B[Prompt builder\n5 system prompt variants]
+  B --> O[OpenAI API call\nModel + temperature]
+  O --> R[Response parser\n10 structured Q&A items]
+  R --> S
 
-    S -->|Expandable Sections| U
+  S --> E[UI rendering\nCollapsible Q&A sections]
 
-    S --> SG[Security Guard\nNo Fabrication Policy]
-    SG -->|Validate / Sanitize| S
+  S --> G[Security guard\nNo fabrication policy]
+  G --> S
+
