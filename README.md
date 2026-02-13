@@ -29,23 +29,3 @@ This tool helps candidates prepare for the initial recruiter conversation by ali
 ## 🏗 Architecture Overview
 
 ![Architecture Diagram](assets/Tech_Recruiter_Prep_AI_Architecture_Diagram.png)
-
-```mermaid
-flowchart TD
-  U[User] --> S[Streamlit UI]
-  U -->|Upload resume PDF| S
-  U -->|Enter JD title + description| S
-  U -->|Select level + company type| S
-  U -->|Choose model + temperature| S
-
-  S --> P[Resume text extraction]
-  P --> B[Prompt builder\n5 system prompt variants]
-  B --> O[OpenAI API call\nModel + temperature]
-  O --> R[Response parser\n10 structured Q&A items]
-  R --> S
-
-  S --> E[UI rendering\nCollapsible Q&A sections]
-
-  S --> G[Security guard\nNo fabrication policy]
-  G --> S
-
