@@ -3,9 +3,11 @@
 from __future__ import annotations
 
 import json
+from dataclasses import dataclass
 
 from .openai_client import chat_json
 from .schema import RecruiterPrepOutput
+from .pricing import CostBreakdown, estimate_cost
 from src.prompts.system_prompts import SYSTEM_PROMPTS
 from src.prompts.guardrails import guardrail_system_instructions
 from src.prompts.few_shot_examples import recruiter_prep_one_item_example
@@ -22,6 +24,12 @@ CATEGORIES = [
     "Career trajectory",
     "Logistics (compensation, location, timeline)",
 ]
+
+
+@dataclass(frozen=True)
+class GenerationResult:
+    output: RecruiterPrepOutput
+    cost: CostBreakdown
 
 
 def build_user_prompt(
@@ -100,4 +108,10 @@ def generate_recruiter_prep(
 
     content = resp.choices[0].message.content
     data = json.loads(content)
-    return RecruiterPrepOutput.model_validate(data)
+    parsed = RecruiterPrepOutput.model_validate(data)
+
+    prompt_tokens = getattr(resp.usage, "prompt_tokens", 0) or 0
+    completion_tokens = getattr(resp.usage, "completion_tokens", 0) or 0
+    cost = estimate_cost(model, prompt_tokens, completion_tokens)
+
+    return GenerationResult(output=parsed, cost=cost)

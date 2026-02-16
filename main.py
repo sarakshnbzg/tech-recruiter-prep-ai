@@ -174,12 +174,17 @@ if generate_clicked:
             st.stop()
 
     # Render output
+    prep = result.output
+    cost = result.cost
+
     st.subheader("Results")
     st.caption(
-        "Each section includes: recruiter question, intent, concise answer, and a follow-up probe."
+        f"Estimated API cost: ${cost.total_cost_usd:.6f} "
+        f"(input ${cost.input_cost_usd:.6f} + output ${cost.output_cost_usd:.6f}) • "
+        f"Tokens: prompt {cost.prompt_tokens}, completion {cost.completion_tokens}"
     )
 
-    for i, item in enumerate(result.questions, start=1):
+    for i, item in enumerate(prep.questions, start=1):
         header = f"{i}. {item.category}: {item.question}"
         with st.expander(header, expanded=(i == 1)):
             st.markdown(f"**Intent:** {item.intent}")
