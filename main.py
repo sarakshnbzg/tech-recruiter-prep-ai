@@ -2,117 +2,30 @@ from __future__ import annotations
 
 import streamlit as st
 
-from src.core.pdf_extract import extract_text_from_pdf
+from src.core.alignment import (
+    extract_requirements_from_jd,
+    render_alignment_heatmap_png,
+    score_requirements_against_resume,
+)
 from src.core.generate import generate_recruiter_prep
+from src.core.pdf_extract import extract_text_from_pdf
 from src.core.validation import validate_user_inputs
 from src.prompts.system_prompts import SYSTEM_PROMPTS
 
-st.set_page_config(
-    page_title="Tech Recruiter Prep AI",
-    page_icon="🧠",
-    layout="wide",
-)
-
-st.title("Tech Recruiter Prep AI")
-st.caption(
-    "Generate recruiter-style screening questions + concise, recruiter-ready answers grounded in your resume."
-)
 
 # -----------------------------
-# Sidebar: Settings
+# Helpers
 # -----------------------------
-with st.sidebar:
-    st.header("Settings")
-
-    model = st.selectbox(
-        "Model",
-        options=[
-            "gpt-4.1",
-            "gpt-4.1-mini",
-            "gpt-4.1-nano",
-            "gpt-4o",
-            "gpt-4o-mini",
-        ],
-        index=4,
-        help="Choose the OpenAI model used for generation.",
-    )
-
-    temperature = st.slider(
-        "Creativity (temperature)",
-        min_value=0.0,
-        max_value=1.5,
-        value=0.7,
-        step=0.1,
-        help="Higher = more creative variation. Lower = more consistent.",
-    )
-
-    prompt_key = st.selectbox(
-        "System prompt strategy",
-        options=list(SYSTEM_PROMPTS.keys()),
-        index=0,
-        help="Internal prompt variants for experimentation/evaluation.",
-    )
-
-    st.divider()
-    st.markdown("**Security**")
-    st.write("- Refuses fabrication of resume experience")
-    st.write("- Basic input sanitization for misuse patterns")
-
-# -----------------------------
-# Main: Inputs
-# -----------------------------
-col_left, col_right = st.columns([1.2, 1])
-
-with col_left:
-    st.subheader("Job & Candidate Inputs")
-
-    job_title = st.text_input(
-        "Job Title", placeholder="e.g., AI Engineer / ML Engineer / Data Scientist"
-    )
-
-    level = st.selectbox(
-        "Candidate Level",
-        options=["Intern", "Junior", "Mid", "Senior", "Staff/Lead"],
-        index=2,
-    )
-
-    company_type = st.selectbox(
-        "Company Type",
-        options=["Startup", "Enterprise"],
-        index=0,
-    )
-
-    job_description = st.text_area(
-        "Job Description",
-        height=220,
-        placeholder="Paste the job description here...",
-    )
-
-with col_right:
-    st.subheader("Resume Upload")
-    resume_file = st.file_uploader(
-        "Upload Resume (PDF)",
-        type=["pdf"],
-        accept_multiple_files=False,
-        help="We extract text from your PDF and use it as the source of truth.",
-    )
-
-    with st.expander("Tips for best PDF extraction"):
-        st.write("- Selectable text PDFs work best (not scanned images).")
-        st.write(
-            "- If text extraction fails, try exporting your resume as a new PDF from Google Docs/Word."
-        )
-
-# -----------------------------
-# Generate
-# -----------------------------
-st.divider()
-generate_clicked = st.button(
-    "Generate 10 Recruiter Q&As", type="primary", use_container_width=True
-)
-
-if generate_clicked:
-    # Basic validations
+def validate_inputs_or_stop(
+    *,
+    job_title: str,
+    job_description: str,
+    level: str,
+    company_type: str,
+    model: str,
+    temperature: float,
+    resume_file,
+) -> None:
     if not job_title.strip():
         st.error("Please enter a Job Title.")
         st.stop()
@@ -139,7 +52,8 @@ if generate_clicked:
         st.error(str(e))
         st.stop()
 
-    # Extract resume text
+
+def get_resume_text_or_stop(resume_file) -> str:
     with st.status("Extracting resume text…", expanded=False) as status:
         try:
             resume_bytes = resume_file.read()
@@ -150,11 +64,69 @@ if generate_clicked:
                 )
                 st.stop()
             status.update(label="Resume extracted.", state="complete")
+            return resume_text
         except Exception as e:
             status.update(label="Resume extraction failed.", state="error")
             st.exception(e)
             st.stop()
 
+
+def run_alignment(
+    *,
+    model: str,
+    job_title: str,
+    job_description: str,
+    resume_text: str,
+) -> None:
+    with st.status("Generating alignment heatmap…", expanded=True) as status:
+        try:
+            requirements = extract_requirements_from_jd(
+                model=model,
+                temperature=0.2,  # stable extraction
+                job_title=job_title,
+                job_desc=job_description,
+                max_items=10,
+            )
+            matches = score_requirements_against_resume(requirements, resume_text)
+            heatmap_png = render_alignment_heatmap_png(matches)
+            status.update(label="Alignment done!", state="complete")
+        except Exception as e:
+            status.update(label="Alignment failed.", state="error")
+            st.exception(e)
+            st.stop()
+
+    st.subheader("Resume ↔ JD Alignment")
+    st.image(heatmap_png, width="stretch")
+
+    rows = [
+        {
+            "Requirement": m.requirement,
+            "Keywords": ", ".join(m.keywords),
+            "Strength": (
+                "Strong"
+                if m.strength == 2
+                else "Partial" if m.strength == 1 else "Missing"
+            ),
+            "Evidence": m.evidence_snippet,
+        }
+        for m in matches
+    ]
+
+    st.markdown("### Evidence table")
+    st.dataframe(rows, width="stretch")
+
+
+def run_generation(
+    *,
+    model: str,
+    prompt_key: str,
+    temperature: float,
+    job_title: str,
+    job_description: str,
+    level: str,
+    company_type: str,
+    resume_text: str,
+) -> None:
     with st.status("Generating recruiter Q&As…", expanded=True) as status:
         try:
             result = generate_recruiter_prep(
@@ -173,7 +145,6 @@ if generate_clicked:
             st.exception(e)
             st.stop()
 
-    # Render output
     prep = result.output
     cost = result.cost
 
@@ -190,3 +161,152 @@ if generate_clicked:
             st.markdown(f"**Intent:** {item.intent}")
             st.markdown(f"**Recruiter-ready answer:** {item.answer}")
             st.markdown(f"**Follow-up probe:** {item.follow_up}")
+
+
+# -----------------------------
+# Page
+# -----------------------------
+st.set_page_config(page_title="Tech Recruiter Prep AI", page_icon="🧠", layout="wide")
+
+st.title("Tech Recruiter Prep AI")
+st.caption(
+    "Generate recruiter-style screening questions + concise, recruiter-ready answers grounded in your resume."
+)
+
+
+# -----------------------------
+# Sidebar: Settings
+# -----------------------------
+with st.sidebar:
+    st.header("Settings")
+
+    model = st.selectbox(
+        "Model",
+        options=["gpt-4.1", "gpt-4.1-mini", "gpt-4.1-nano", "gpt-4o", "gpt-4o-mini"],
+        index=4,
+        help="Choose the OpenAI model used for generation.",
+    )
+
+    temperature = st.slider(
+        "Creativity (temperature)",
+        min_value=0.0,
+        max_value=1.5,
+        value=0.7,
+        step=0.1,
+        help="Higher = more creative variation. Lower = more consistent.",
+    )
+
+    prompt_key = st.selectbox(
+        "System prompt strategy",
+        options=list(SYSTEM_PROMPTS.keys()),
+        index=0,
+        help="Internal prompt variants for experimentation/evaluation.",
+    )
+
+    st.divider()
+    st.markdown("**Security**")
+    st.write("- Refuses fabrication of resume experience")
+    st.write("- Basic input sanitization for misuse patterns")
+
+
+# -----------------------------
+# Main: Inputs
+# -----------------------------
+col_left, col_right = st.columns([1.2, 1])
+
+with col_left:
+    st.subheader("Job & Candidate Inputs")
+
+    job_title = st.text_input(
+        "Job Title", placeholder="e.g., AI Engineer / ML Engineer / Data Scientist"
+    )
+
+    level = st.selectbox(
+        "Candidate Level",
+        options=["Intern", "Junior", "Mid", "Senior", "Staff/Lead"],
+        index=2,
+    )
+
+    company_type = st.selectbox(
+        "Company Type", options=["Startup", "Enterprise"], index=0
+    )
+
+    job_description = st.text_area(
+        "Job Description",
+        height=220,
+        placeholder="Paste the job description here...",
+    )
+
+with col_right:
+    st.subheader("Resume Upload")
+    resume_file = st.file_uploader(
+        "Upload Resume (PDF)",
+        type=["pdf"],
+        accept_multiple_files=False,
+        help="We extract text from your PDF and use it as the source of truth.",
+    )
+
+    with st.expander("Tips for best PDF extraction"):
+        st.write("- Selectable text PDFs work best (not scanned images).")
+        st.write(
+            "- If text extraction fails, try exporting your resume as a new PDF from Google Docs/Word."
+        )
+
+
+# -----------------------------
+# Actions
+# -----------------------------
+st.divider()
+
+col_a, col_b = st.columns(2)
+
+with col_a:
+    generate_clicked = st.button(
+        "Generate 10 Recruiter Q&As", type="primary", use_container_width=True
+    )
+
+with col_b:
+    alignment_clicked = st.button(
+        "Generate Resume ↔ JD Alignment Heatmap", use_container_width=True
+    )
+
+
+if alignment_clicked:
+    validate_inputs_or_stop(
+        job_title=job_title,
+        job_description=job_description,
+        level=level,
+        company_type=company_type,
+        model=model,
+        temperature=temperature,
+        resume_file=resume_file,
+    )
+    resume_text = get_resume_text_or_stop(resume_file)
+    run_alignment(
+        model=model,
+        job_title=job_title,
+        job_description=job_description,
+        resume_text=resume_text,
+    )
+
+elif generate_clicked:
+    validate_inputs_or_stop(
+        job_title=job_title,
+        job_description=job_description,
+        level=level,
+        company_type=company_type,
+        model=model,
+        temperature=temperature,
+        resume_file=resume_file,
+    )
+    resume_text = get_resume_text_or_stop(resume_file)
+    run_generation(
+        model=model,
+        prompt_key=prompt_key,
+        temperature=temperature,
+        job_title=job_title,
+        job_description=job_description,
+        level=level,
+        company_type=company_type,
+        resume_text=resume_text,
+    )
