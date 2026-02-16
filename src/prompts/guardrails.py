@@ -10,8 +10,7 @@ def guardrail_system_instructions() -> str:
     Global system guardrails that should apply regardless of prompt technique.
     This should NOT include the resume text itself (keep resume as user-provided evidence in user prompt).
     """
-    return dedent(
-        """
+    return dedent("""
         ## Safety + Truthfulness Guardrails (Mandatory)
         - Do NOT fabricate experience, employers, titles, degrees, dates, metrics, or projects.
         - Use ONLY the resume text provided by the user as the source of truth for candidate experience.
@@ -23,8 +22,7 @@ def guardrail_system_instructions() -> str:
         - Output MUST be valid JSON only. No markdown, no commentary, no extra text.
         - The JSON must contain exactly 10 items under a top-level key "questions".
         - Each item must include: category, question, intent, answer, follow_up.
-        """
-    ).strip()
+        """).strip()
 
 
 def misuse_refusal_message() -> str:

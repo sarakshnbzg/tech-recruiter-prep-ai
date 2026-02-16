@@ -10,7 +10,6 @@ from src.prompts.system_prompts import SYSTEM_PROMPTS
 from src.prompts.guardrails import guardrail_system_instructions
 from src.prompts.few_shot_examples import recruiter_prep_one_item_example
 
-
 CATEGORIES = [
     "Background walkthrough",
     "Motivation for role",
@@ -33,7 +32,7 @@ def build_user_prompt(
     resume_text: str,
     use_few_shot: bool,
 ) -> str:
-    
+
     example_block = ""
     if use_few_shot:
         example_block = f"""
@@ -73,14 +72,21 @@ def generate_recruiter_prep(
     company_type: str,
     resume_text: str,
 ) -> RecruiterPrepOutput:
-    
+
     if system_prompt_key not in SYSTEM_PROMPTS:
         raise ValueError(f"Unknown system_prompt_key: {system_prompt_key}")
-    
+
     use_few_shot = system_prompt_key == "few_shot"
     system_prompt = SYSTEM_PROMPTS[system_prompt_key]
 
-    user_prompt = build_user_prompt(job_title, job_desc, level, company_type, resume_text, use_few_shot,)
+    user_prompt = build_user_prompt(
+        job_title,
+        job_desc,
+        level,
+        company_type,
+        resume_text,
+        use_few_shot,
+    )
 
     # Compose system: technique behavior + global guardrails
     system_with_guardrails = f"{system_prompt}\n\n{guardrail_system_instructions()}"

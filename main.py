@@ -7,7 +7,6 @@ from src.core.generate import generate_recruiter_prep
 from src.core.validation import validate_user_inputs
 from src.prompts.system_prompts import SYSTEM_PROMPTS
 
-
 st.set_page_config(
     page_title="Tech Recruiter Prep AI",
     page_icon="🧠",
@@ -67,7 +66,9 @@ col_left, col_right = st.columns([1.2, 1])
 with col_left:
     st.subheader("Job & Candidate Inputs")
 
-    job_title = st.text_input("Job Title", placeholder="e.g., AI Engineer / ML Engineer / Data Scientist")
+    job_title = st.text_input(
+        "Job Title", placeholder="e.g., AI Engineer / ML Engineer / Data Scientist"
+    )
 
     level = st.selectbox(
         "Candidate Level",
@@ -98,13 +99,17 @@ with col_right:
 
     with st.expander("Tips for best PDF extraction"):
         st.write("- Selectable text PDFs work best (not scanned images).")
-        st.write("- If text extraction fails, try exporting your resume as a new PDF from Google Docs/Word.")
+        st.write(
+            "- If text extraction fails, try exporting your resume as a new PDF from Google Docs/Word."
+        )
 
 # -----------------------------
 # Generate
 # -----------------------------
 st.divider()
-generate_clicked = st.button("Generate 10 Recruiter Q&As", type="primary", use_container_width=True)
+generate_clicked = st.button(
+    "Generate 10 Recruiter Q&As", type="primary", use_container_width=True
+)
 
 if generate_clicked:
     # Basic validations
@@ -121,7 +126,15 @@ if generate_clicked:
         st.stop()
 
     try:
-        validate_user_inputs(job_title, job_description, level, company_type, model, temperature, resume_file)
+        validate_user_inputs(
+            job_title,
+            job_description,
+            level,
+            company_type,
+            model,
+            temperature,
+            resume_file,
+        )
     except Exception as e:
         st.error(str(e))
         st.stop()
@@ -132,7 +145,9 @@ if generate_clicked:
             resume_bytes = resume_file.read()
             resume_text = extract_text_from_pdf(resume_bytes)
             if not resume_text.strip():
-                st.error("Could not extract text from the PDF. Please try a different PDF.")
+                st.error(
+                    "Could not extract text from the PDF. Please try a different PDF."
+                )
                 st.stop()
             status.update(label="Resume extracted.", state="complete")
         except Exception as e:
@@ -160,7 +175,9 @@ if generate_clicked:
 
     # Render output
     st.subheader("Results")
-    st.caption("Each section includes: recruiter question, intent, concise answer, and a follow-up probe.")
+    st.caption(
+        "Each section includes: recruiter question, intent, concise answer, and a follow-up probe."
+    )
 
     for i, item in enumerate(result.questions, start=1):
         header = f"{i}. {item.category}: {item.question}"

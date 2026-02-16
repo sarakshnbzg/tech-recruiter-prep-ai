@@ -24,4 +24,5 @@ def extract_text_from_pdf(file_bytes: bytes, max_chars: int = 60_000) -> str:
 
 def _bytes_to_filelike(b: bytes):
     import io
+
     return io.BytesIO(b)

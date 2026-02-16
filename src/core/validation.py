@@ -6,7 +6,17 @@ from typing import Optional, Sequence, List
 
 # Keep these aligned with your project requirements
 ALLOWED_COMPANY_TYPES = ("Startup", "Enterprise")
-ALLOWED_LEVELS = ("Intern", "Junior", "Mid", "Senior", "Staff", "Principal", "Lead", "Manager", "Director")
+ALLOWED_LEVELS = (
+    "Intern",
+    "Junior",
+    "Mid",
+    "Senior",
+    "Staff",
+    "Principal",
+    "Lead",
+    "Manager",
+    "Director",
+)
 
 # If you want to enforce the project’s allowed models strictly:
 ALLOWED_MODELS = (
@@ -59,9 +69,7 @@ def validate_user_inputs(
     if _is_blank(candidate_level):
         errors.append("Candidate Level is required.")
     elif candidate_level not in ALLOWED_LEVELS:
-        errors.append(
-            f"Candidate Level must be one of: {', '.join(ALLOWED_LEVELS)}."
-        )
+        errors.append(f"Candidate Level must be one of: {', '.join(ALLOWED_LEVELS)}.")
 
     if _is_blank(company_type):
         errors.append("Company Type is required.")

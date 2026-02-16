@@ -4,7 +4,9 @@ from pydantic import BaseModel, Field, conlist
 
 
 class QAItem(BaseModel):
-    category: str = Field(..., description="One of the required recruiter screening categories")
+    category: str = Field(
+        ..., description="One of the required recruiter screening categories"
+    )
     question: str
     intent: str
     answer: str
