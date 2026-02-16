@@ -140,14 +140,11 @@ if generate_clicked:
             st.exception(e)
             st.stop()
 
-    # Generate
-    system_prompt = SYSTEM_PROMPTS[prompt_key]
-
     with st.status("Generating recruiter Q&As…", expanded=True) as status:
         try:
             result = generate_recruiter_prep(
                 model=model,
-                system_prompt=system_prompt,
+                system_prompt_key=prompt_key,
                 temperature=temperature,
                 job_title=job_title,
                 job_desc=job_description,
