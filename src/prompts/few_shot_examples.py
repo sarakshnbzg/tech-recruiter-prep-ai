@@ -1,3 +1,4 @@
+# pylint: disable=line-too-long
 # src/prompts/few_shot_examples.py
 from __future__ import annotations
 

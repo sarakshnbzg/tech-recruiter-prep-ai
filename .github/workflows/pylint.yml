@@ -28,6 +28,6 @@ jobs:
           pip install -r requirements.txt
           pip install pylint
 
-      - name: Run pylint (src only)
+      - name: Analysing the code with pylint
         run: |
-          pylint src
+          pylint --rcfile=.pylintrc src

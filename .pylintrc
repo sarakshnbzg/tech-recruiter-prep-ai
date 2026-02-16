@@ -1,0 +1,20 @@
+[MASTER]
+# Only lint your source package
+ignore=venv,.venv,dist,build,__pycache__
+jobs=0
+
+[FORMAT]
+max-line-length=120
+
+[MESSAGES CONTROL]
+disable=
+    C0114,  # missing-module-docstring
+    C0115,  # missing-class-docstring
+    C0116,  # missing-function-docstring
+    R0913,  # too-many-arguments
+    R0914,  # too-many-locals
+    R0912,  # too-many-branches
+    R0917,  # too-many-positional-arguments
+    W0718,  # broad-exception-caught (Streamlit UI often catches to show error)
+    C0415,  # import-outside-toplevel (sometimes used to avoid optional deps at import-time)
+    C0411   # wrong-import-order (if it nags due to src layout)
