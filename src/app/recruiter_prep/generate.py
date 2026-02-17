@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 from dataclasses import dataclass
 
-from src.helpers.openai_client import callOpenAi
+from src.helpers.openai_client import call_open_ai
 from src.app.pricing.calculate import CostBreakdown, estimate_cost
 from src.app.recruiter_prep.prompts.prompt_guardrails import guardrail_system_instructions
 from src.app.recruiter_prep.prompts.system_prompts import SYSTEM_PROMPTS
@@ -46,7 +46,7 @@ def generate_recruiter_prep(
 
     system_with_guardrails = f"{system_prompt}\n\n{guardrail_system_instructions()}"
 
-    resp = callOpenAi(
+    resp = call_open_ai(
         model=model,
         system_prompt=system_with_guardrails,
         user_prompt=user_prompt,

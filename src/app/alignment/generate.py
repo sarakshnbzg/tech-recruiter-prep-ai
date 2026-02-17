@@ -8,7 +8,7 @@ from typing import Any
 
 import matplotlib.pyplot as plt
 
-from src.helpers.openai_client import callOpenAi
+from src.helpers.openai_client import call_open_ai
 from src.app.alignment.build_prompt import build_extract_requirements_prompts
 
 
@@ -37,7 +37,7 @@ def extract_requirements_from_jd(
         max_items=max_items,
     )
 
-    resp = callOpenAi(
+    resp = call_open_ai(
         model=model,
         system_prompt=system_prompt,
         user_prompt=user_prompt,
