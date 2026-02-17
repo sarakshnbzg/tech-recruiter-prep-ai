@@ -1,18 +1,21 @@
-# src/core/pricing.py
 from __future__ import annotations
 
 from dataclasses import dataclass
+from src.app.settings import ALLOWED_MODELS
 
 MODEL_PRICING_PER_1M: dict[str, tuple[float, float]] = {
-    # flagship models
-    "gpt-4.1": (2.00, 8.00),  # typical developer pricing
-    "gpt-4o": (2.50, 10.00),  # typical developer pricing
-    # mid / balanced models
     "gpt-4.1-mini": (0.40, 1.60),
     "gpt-4o-mini": (0.15, 0.60),
-    # smaller, cheaper
     "gpt-4.1-nano": (0.10, 0.40),
+    "gpt-3.5-turbo": (0.50, 1.50),
 }
+
+# Safety check: no drift allowed
+_missing_pricing = set(ALLOWED_MODELS) - set(MODEL_PRICING_PER_1M.keys())
+if _missing_pricing:
+    raise ValueError(
+        f"Missing pricing for allowed models: {sorted(_missing_pricing)}"
+    )
 
 
 @dataclass(frozen=True)
@@ -27,13 +30,15 @@ class CostBreakdown:
 def estimate_cost(
     model: str, prompt_tokens: int, completion_tokens: int
 ) -> CostBreakdown:
+
     if model not in MODEL_PRICING_PER_1M:
-        # Unknown model => can’t price it safely
-        return CostBreakdown(prompt_tokens, completion_tokens, 0.0, 0.0, 0.0)
+        raise ValueError(f"No pricing configured for model: {model}")
 
     in_price, out_price = MODEL_PRICING_PER_1M[model]
+
     input_cost = (prompt_tokens / 1_000_000) * in_price
     output_cost = (completion_tokens / 1_000_000) * out_price
+
     return CostBreakdown(
         prompt_tokens=prompt_tokens,
         completion_tokens=completion_tokens,

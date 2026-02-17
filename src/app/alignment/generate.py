@@ -8,7 +8,7 @@ from typing import Any
 
 import matplotlib.pyplot as plt
 
-from .openai_client import chat_json
+from ...helpers.openai_client import chat_json
 
 
 @dataclass(frozen=True)

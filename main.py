@@ -2,22 +2,22 @@ from __future__ import annotations
 
 import streamlit as st
 
-from src.core.alignment import (
+from src.app.alignment.generate import (
     extract_requirements_from_jd,
     render_alignment_heatmap_png,
     score_requirements_against_resume,
 )
-from src.core.generate import generate_recruiter_prep
-from src.core.pdf_extract import extract_text_from_pdf
-from src.core.validation import validate_user_inputs
-from src.prompts.system_prompts import SYSTEM_PROMPTS
-
-# -----------------------------
-# Fixed Alignment Settings (not user-editable)
-# -----------------------------
-ALIGNMENT_TEMPERATURE = 0.2
-ALIGNMENT_MAX_ITEMS = 10
-
+from src.app.recruiter_prep.generate import generate_recruiter_prep
+from src.helpers.pdf_extract import extract_text_from_pdf
+from src.app.settings import (
+    ALLOWED_MODELS,
+    ALLOWED_LEVELS,
+    ALLOWED_COMPANY_TYPES,
+    ALIGNMENT_TEMPERATURE,
+    ALIGNMENT_MAX_ITEMS,
+)
+from src.app.validation import validate_user_inputs_or_raise
+from src.app.recruiter_prep.prompts.system_prompts import SYSTEM_PROMPTS
 
 # -----------------------------
 # Helpers
@@ -45,7 +45,7 @@ def validate_inputs_or_stop(
         st.stop()
 
     try:
-        validate_user_inputs(
+        validate_user_inputs_or_raise(
             job_title,
             job_description,
             level,
@@ -168,7 +168,7 @@ def run_generation(
 # -----------------------------
 # Page
 # -----------------------------
-st.set_page_config(page_title="Tech Recruiter Prep AI", page_icon="🧠", layout="wide")
+st.set_page_config(page_title="First Round Tech Recruiter Prep AI", page_icon="🧠", layout="wide")
 
 # Blue buttons (override Streamlit defaults)
 st.markdown(
@@ -224,7 +224,7 @@ with st.sidebar:
     # Model is shared by both modes
     model = st.selectbox(
         "Model",
-        options=["gpt-4o-mini", "gpt-4.1-mini", "gpt-4.1-nano", "gpt-3.5-turbo"],
+        options=list(ALLOWED_MODELS),
         index=0,
         help="Choose the OpenAI model used for the selected mode.",
     )
@@ -276,14 +276,14 @@ with col_left:
 
     level = st.selectbox(
         "Candidate Level",
-        options=["Intern", "Junior", "Mid", "Senior", "Staff/Lead"],
+        options=list(ALLOWED_LEVELS),
         index=2,
     )
 
     # Company Type as radio (single selection)
     company_type = st.radio(
         "Company Type",
-        options=["Startup", "Enterprise"],
+        options=list(ALLOWED_COMPANY_TYPES),
         index=0,
         horizontal=True,
     )
