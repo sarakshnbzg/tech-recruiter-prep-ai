@@ -163,7 +163,7 @@ def render_alignment_heatmap_png(matches: list[RequirementMatch]) -> bytes:
     cbar.set_ticks([0, 1, 2])
     cbar.set_ticklabels(["Missing", "Partial", "Strong"])
 
-    ax.set_title("Resume ↔ JD Alignment Heatmap", fontsize=12, pad=10)
+    ax.set_title("Resume ↔ Job Description Alignment Heatmap", fontsize=12, pad=10)
 
     buf = BytesIO()
     plt.savefig(buf, format="png", bbox_inches="tight", dpi=220)

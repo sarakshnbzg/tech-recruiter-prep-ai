@@ -12,6 +12,12 @@ from src.core.pdf_extract import extract_text_from_pdf
 from src.core.validation import validate_user_inputs
 from src.prompts.system_prompts import SYSTEM_PROMPTS
 
+# -----------------------------
+# Fixed Alignment Settings (not user-editable)
+# -----------------------------
+ALIGNMENT_TEMPERATURE = 0.2
+ALIGNMENT_MAX_ITEMS = 10
+
 
 # -----------------------------
 # Helpers
@@ -72,20 +78,16 @@ def get_resume_text_or_stop(resume_file) -> str:
 
 
 def run_alignment(
-    *,
-    model: str,
-    job_title: str,
-    job_description: str,
-    resume_text: str,
+    *, model: str, job_title: str, job_description: str, resume_text: str
 ) -> None:
     with st.status("Generating alignment heatmap…", expanded=True) as status:
         try:
             requirements = extract_requirements_from_jd(
                 model=model,
-                temperature=0.2,  # stable extraction
+                temperature=ALIGNMENT_TEMPERATURE,
                 job_title=job_title,
                 job_desc=job_description,
-                max_items=10,
+                max_items=ALIGNMENT_MAX_ITEMS,
             )
             matches = score_requirements_against_resume(requirements, resume_text)
             heatmap_png = render_alignment_heatmap_png(matches)
@@ -95,8 +97,8 @@ def run_alignment(
             st.exception(e)
             st.stop()
 
-    st.subheader("Resume ↔ JD Alignment")
-    st.image(heatmap_png, width="stretch")
+    st.subheader("Resume ↔ Job Description Alignment")
+    st.image(heatmap_png, use_container_width=True)
 
     rows = [
         {
@@ -168,46 +170,97 @@ def run_generation(
 # -----------------------------
 st.set_page_config(page_title="Tech Recruiter Prep AI", page_icon="🧠", layout="wide")
 
+# Blue buttons (override Streamlit defaults)
+st.markdown(
+    """
+<style>
+/* Primary button */
+div.stButton > button[kind="primary"] {
+  background-color: #2563EB !important;  /* Blue */
+  border: 1px solid #1D4ED8 !important;
+  color: white !important;
+}
+div.stButton > button[kind="primary"]:hover {
+  background-color: #1D4ED8 !important;
+  border-color: #1E40AF !important;
+}
+div.stButton > button[kind="primary"]:active {
+  background-color: #1E40AF !important;
+}
+
+/* Secondary buttons */
+div.stButton > button:not([kind="primary"]) {
+  border: 1px solid #2563EB !important;
+  color: #2563EB !important;
+}
+div.stButton > button:not([kind="primary"]):hover {
+  background-color: rgba(37, 99, 235, 0.08) !important;
+}
+</style>
+""",
+    unsafe_allow_html=True,
+)
+
 st.title("Tech Recruiter Prep AI")
 st.caption(
     "Generate recruiter-style screening questions + concise, recruiter-ready answers grounded in your resume."
 )
 
-
 # -----------------------------
-# Sidebar: Settings
+# Sidebar: Mode + Settings
 # -----------------------------
 with st.sidebar:
+    st.header("Mode")
+    mode = st.radio(
+        "Choose what to generate",
+        options=["Recruiter Q&As", "Resume ↔ Job Description Alignment"],
+        index=0,
+        label_visibility="collapsed",
+    )
+
+    st.divider()
     st.header("Settings")
 
+    # Model is shared by both modes
     model = st.selectbox(
         "Model",
-        options=["gpt-4.1", "gpt-4.1-mini", "gpt-4.1-nano", "gpt-4o", "gpt-4o-mini"],
-        index=4,
-        help="Choose the OpenAI model used for generation.",
-    )
-
-    temperature = st.slider(
-        "Creativity (temperature)",
-        min_value=0.0,
-        max_value=1.5,
-        value=0.7,
-        step=0.1,
-        help="Higher = more creative variation. Lower = more consistent.",
-    )
-
-    prompt_key = st.selectbox(
-        "System prompt strategy",
-        options=list(SYSTEM_PROMPTS.keys()),
+        options=["gpt-4o-mini", "gpt-4.1-mini", "gpt-4.1-nano", "gpt-3.5-turbo"],
         index=0,
-        help="Internal prompt variants for experimentation/evaluation.",
+        help="Choose the OpenAI model used for the selected mode.",
     )
+
+    if mode == "Recruiter Q&As":
+        temperature = st.slider(
+            "Creativity (temperature)",
+            min_value=0.0,
+            max_value=1.5,
+            value=0.7,
+            step=0.1,
+            help="Higher = more creative variation. Lower = more consistent.",
+        )
+
+        prompt_key = st.selectbox(
+            "System prompt strategy",
+            options=list(SYSTEM_PROMPTS.keys()),
+            index=0,
+            help="Internal prompt variants for experimentation/evaluation.",
+        )
+    else:
+        # Alignment settings shown as fixed values (not editable)
+        st.subheader("Alignment Settings")
+        st.markdown(
+            f"- **Extraction temperature:** `{ALIGNMENT_TEMPERATURE}`\n"
+            f"- **Max requirements extracted:** `{ALIGNMENT_MAX_ITEMS}`"
+        )
+        st.caption("These are fixed for stability and consistent results.")
+        # Keep these defined so validation can still run without branching complexity
+        temperature = ALIGNMENT_TEMPERATURE
+        prompt_key = list(SYSTEM_PROMPTS.keys())[0]
 
     st.divider()
     st.markdown("**Security**")
     st.write("- Refuses fabrication of resume experience")
     st.write("- Basic input sanitization for misuse patterns")
-
 
 # -----------------------------
 # Main: Inputs
@@ -227,8 +280,12 @@ with col_left:
         index=2,
     )
 
-    company_type = st.selectbox(
-        "Company Type", options=["Startup", "Enterprise"], index=0
+    # Company Type as radio (single selection)
+    company_type = st.radio(
+        "Company Type",
+        options=["Startup", "Enterprise"],
+        index=0,
+        horizontal=True,
     )
 
     job_description = st.text_area(
@@ -252,26 +309,19 @@ with col_right:
             "- If text extraction fails, try exporting your resume as a new PDF from Google Docs/Word."
         )
 
-
 # -----------------------------
-# Actions
+# Action
 # -----------------------------
 st.divider()
 
-col_a, col_b = st.columns(2)
+primary_label = (
+    "Generate 10 Recruiter Q&As"
+    if mode == "Recruiter Q&As"
+    else "Generate Resume ↔ Job Description Alignment Heatmap"
+)
+run_clicked = st.button(primary_label, type="primary", use_container_width=True)
 
-with col_a:
-    generate_clicked = st.button(
-        "Generate 10 Recruiter Q&As", type="primary", use_container_width=True
-    )
-
-with col_b:
-    alignment_clicked = st.button(
-        "Generate Resume ↔ JD Alignment Heatmap", use_container_width=True
-    )
-
-
-if alignment_clicked:
+if run_clicked:
     validate_inputs_or_stop(
         job_title=job_title,
         job_description=job_description,
@@ -281,32 +331,24 @@ if alignment_clicked:
         temperature=temperature,
         resume_file=resume_file,
     )
-    resume_text = get_resume_text_or_stop(resume_file)
-    run_alignment(
-        model=model,
-        job_title=job_title,
-        job_description=job_description,
-        resume_text=resume_text,
-    )
 
-elif generate_clicked:
-    validate_inputs_or_stop(
-        job_title=job_title,
-        job_description=job_description,
-        level=level,
-        company_type=company_type,
-        model=model,
-        temperature=temperature,
-        resume_file=resume_file,
-    )
     resume_text = get_resume_text_or_stop(resume_file)
-    run_generation(
-        model=model,
-        prompt_key=prompt_key,
-        temperature=temperature,
-        job_title=job_title,
-        job_description=job_description,
-        level=level,
-        company_type=company_type,
-        resume_text=resume_text,
-    )
+
+    if mode == "Resume ↔ Job Description Alignment":
+        run_alignment(
+            model=model,
+            job_title=job_title,
+            job_description=job_description,
+            resume_text=resume_text,
+        )
+    else:
+        run_generation(
+            model=model,
+            prompt_key=prompt_key,
+            temperature=temperature,
+            job_title=job_title,
+            job_description=job_description,
+            level=level,
+            company_type=company_type,
+            resume_text=resume_text,
+        )
