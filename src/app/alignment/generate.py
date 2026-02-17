@@ -8,7 +8,8 @@ from typing import Any
 
 import matplotlib.pyplot as plt
 
-from ...helpers.openai_client import chat_json
+from src.helpers.openai_client import callOpenAi
+from src.app.alignment.build_prompt import build_extract_requirements_prompts
 
 
 @dataclass(frozen=True)
@@ -30,37 +31,16 @@ def extract_requirements_from_jd(
     job_desc: str,
     max_items: int = 10,
 ) -> list[dict[str, Any]]:
-    system = (
-        "You extract structured hiring requirements from job descriptions. "
-        "Return ONLY valid JSON. No markdown."
+    system_prompt, user_prompt = build_extract_requirements_prompts(
+        job_title=job_title,
+        job_desc=job_desc,
+        max_items=max_items,
     )
 
-    schema_hint = {
-        "requirements": [
-            {"requirement": "string (short)", "keywords": ["string", "string"]}
-        ]
-    }
-
-    user = f"""
-Extract the top {max_items} recruiter-relevant requirements from this job description.
-
-Job Title: {job_title}
-
-Job Description:
-\"\"\"{job_desc}\"\"\"
-
-Rules:
-- Output MUST be valid JSON only.
-- Output MUST match this schema:
-{json.dumps(schema_hint, indent=2)}
-- Keep each "requirement" short (5–12 words).
-- "keywords" should be 2–5 concrete terms that can be searched in a resume.
-""".strip()
-
-    resp = chat_json(
+    resp = callOpenAi(
         model=model,
-        system_prompt=system,
-        user_prompt=user,
+        system_prompt=system_prompt,
+        user_prompt=user_prompt,
         temperature=temperature,
     )
 

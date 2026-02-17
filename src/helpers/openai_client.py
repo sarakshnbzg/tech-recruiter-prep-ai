@@ -6,7 +6,7 @@ from openai import OpenAI
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 
-def chat_json(model: str, system_prompt: str, user_prompt: str, temperature: float):
+def callOpenAi(model: str, system_prompt: str, user_prompt: str, temperature: float):
     return client.chat.completions.create(
         model=model,
         temperature=temperature,
